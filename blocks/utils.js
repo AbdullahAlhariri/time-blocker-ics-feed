@@ -52,8 +52,35 @@ function getPrayerTimesForDay(monthObj, day) {
     return prayers;
 }
 
-function getIqamaTweakerForDay(iqamaCalendar, day) {
-    return getPrayerTimesForDay(iqamaCalendar, day).map(time => +time.replace('+', ''))
+function getIqamaTweaksForDay(iqamaCalendar, day, adhanPrayers) {
+    const iqamaTimes = getPrayerTimesForDay(iqamaCalendar, day);
+    if (!iqamaTimes) return null;
+
+    return iqamaTimes.map((iqama, index) => {
+        if (typeof iqama !== 'string') return 0;
+        if (iqama.startsWith('+')) {
+            return parseInt(iqama.substring(1), 10);
+        } else if (iqama.includes(':')) {
+            // Fixed time. Calculate difference from adhan in minutes.
+            if (!adhanPrayers || !adhanPrayers[index]) return 0;
+            const adhan = adhanPrayers[index];
+            const [aH, aM] = adhan.split(':').map(Number);
+            const [iH, iM] = iqama.split(':').map(Number);
+            let diff = (iH * 60 + iM) - (aH * 60 + aM);
+            if (diff < 0) diff += 24 * 60; // Handle midnight wrap
+            return diff;
+        }
+        return 0;
+    });
+}
+
+function getPrayerDuration(tweak, index, date) {
+    let duration = 20 + (tweak || 0);
+    // index 1 is Dhuhr, getDay() 5 is Friday
+    if (index === 1 && date && date.getDay() === 5) {
+        duration += 60;
+    }
+    return duration;
 }
 
 function eventsToIcsContent(events, prodId = '-//Prayers//EN') {
@@ -91,6 +118,7 @@ module.exports = {
     fetchPrayerTimes,
     getPrayerTimesForDay,
     eventsToIcsContent,
-    getIqamaTweakerForDay,
+    getIqamaTweaksForDay,
+    getPrayerDuration,
     parseTimeToDate
 };

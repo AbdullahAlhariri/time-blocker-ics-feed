@@ -34,7 +34,7 @@ const server = http.createServer(async (req, res) => {
                 events = generatePrayerIcsEvents(calendar, iqamaCalendar);
                 filename = 'prayers.ics';
             } else if (type === 'sleep') {
-                events = generateSleepIcsEvents(calendar);
+                events = generateSleepIcsEvents(calendar, iqamaCalendar);
                 filename = 'sleep.ics';
             } else if (type === 'between') {
                 const start = parsedUrl.searchParams.get('start');
@@ -43,7 +43,7 @@ const server = http.createServer(async (req, res) => {
                 if (!start || !end) {
                     throw new Error('Missing "start" or "end" query parameters');
                 }
-                events = generateBetweenPrayersIcsEvents(calendar, start, end, name);
+                events = generateBetweenPrayersIcsEvents(calendar, iqamaCalendar, start, end, name);
                 filename = `${name.replace(/\s+/g, '_')}.ics`;
             }
 

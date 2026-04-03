@@ -1,4 +1,4 @@
-const { addMinutes, getPrayerTimesForDay, parseTimeToDate, getIqamaTweakerForDay } = require('./utils');
+const { addMinutes, getPrayerTimesForDay, parseTimeToDate, getIqamaTweaksForDay, getPrayerDuration } = require('./utils');
 
 const PRAYER_NAMES = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
@@ -9,13 +9,13 @@ function generatePrayerIcsEvents(calendar, iqamaCalendar, year = new Date().getF
         const month = monthIndex + 1;
         Object.keys(monthObj).forEach(day => {
             const prayers = getPrayerTimesForDay(monthObj, day);
-            const iqamaTimes = getIqamaTweakerForDay(iqamaCalendar[month], day);
+            const iqamaTimes = getIqamaTweaksForDay(iqamaCalendar[month-1], day, prayers);
 
             if (!prayers || !iqamaTimes) return;
 
             prayers.forEach((time, index) => {
                 const startDate = parseTimeToDate(year, month, day, time);
-                const endDate = addMinutes(startDate, 20 + iqamaTimes[index]);
+                const endDate = addMinutes(startDate, getPrayerDuration(iqamaTimes[index], index, startDate));
 
                 events.push({
                     uid: `${year}${month}${day}${index}@prayers.local`,

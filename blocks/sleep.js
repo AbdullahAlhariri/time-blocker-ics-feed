@@ -1,9 +1,8 @@
-const { addMinutes, getPrayerTimesForDay, parseTimeToDate } = require('./utils');
+const { addMinutes, getPrayerTimesForDay, parseTimeToDate, getIqamaTweaksForDay, getPrayerDuration } = require('./utils');
 
-function generateSleepIcsEvents(calendar, year = new Date().getFullYear()) {
+function generateSleepIcsEvents(calendar, iqamaCalendar, year = new Date().getFullYear()) {
     let events = [];
     const sleepGoalHours = 8;
-    const PRAYER_DURATION = 45;
 
     let lastNightDurationHours = null;
 
@@ -13,7 +12,8 @@ function generateSleepIcsEvents(calendar, year = new Date().getFullYear()) {
         
         days.forEach(day => {
             const prayers = getPrayerTimesForDay(monthObj, day);
-            if (!prayers) return;
+            const iqamaTimes = getIqamaTweaksForDay(iqamaCalendar[month-1], day, prayers);
+            if (!prayers || !iqamaTimes) return;
 
             const fajrTime = prayers[0];
             const ishaTime = prayers[4];
@@ -21,10 +21,13 @@ function generateSleepIcsEvents(calendar, year = new Date().getFullYear()) {
             const fajrTodayStart = parseTimeToDate(year, month, day, fajrTime);
             const ishaTodayStart = parseTimeToDate(year, month, day, ishaTime);
 
+            const fajrDuration = getPrayerDuration(iqamaTimes[0], 0, fajrTodayStart);
+            const ishaDuration = getPrayerDuration(iqamaTimes[4], 4, ishaTodayStart);
+
             // 1. Part 2 of last night's sleep (if applicable)
             // This occurs in the morning of the current day
             if (lastNightDurationHours !== null && lastNightDurationHours < sleepGoalHours) {
-                const sleep2Start = addMinutes(fajrTodayStart, PRAYER_DURATION);
+                const sleep2Start = addMinutes(fajrTodayStart, fajrDuration);
                 const remainingHours = sleepGoalHours - lastNightDurationHours;
                 
                 if (remainingHours >= 1) {
@@ -41,7 +44,7 @@ function generateSleepIcsEvents(calendar, year = new Date().getFullYear()) {
             // 2. Part 1 of tonight's sleep
             // Starts after Isha today, ends at Fajr tomorrow
             
-            // Get tomorrow's Fajr time (approximation using today's or lookahead)
+            // Get tomorrow's Fajr time (lookahead)
             let nextFajrTime = fajrTime;
             const nextDayNum = Number(day) + 1;
             if (monthObj[nextDayNum]) {
@@ -52,7 +55,7 @@ function generateSleepIcsEvents(calendar, year = new Date().getFullYear()) {
                 if (nextMonthPrayers) nextFajrTime = nextMonthPrayers[0];
             }
 
-            const sleepStart = addMinutes(ishaTodayStart, PRAYER_DURATION);
+            const sleepStart = addMinutes(ishaTodayStart, ishaDuration);
             
             // Robust way to get tomorrow's Fajr start date
             const nextDayDate = new Date(ishaTodayStart);

@@ -1,10 +1,9 @@
-const { getPrayerTimesForDay, parseTimeToDate, addMinutes } = require('./utils');
+const { getPrayerTimesForDay, parseTimeToDate, addMinutes, getIqamaTweaksForDay, getPrayerDuration } = require('./utils');
 
 const PRAYER_NAMES = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
-function generateBetweenPrayersIcsEvents(calendar, startName, endName, eventName, year = new Date().getFullYear()) {
+function generateBetweenPrayersIcsEvents(calendar, iqamaCalendar, startName, endName, eventName, year = new Date().getFullYear()) {
     let events = [];
-    const PRAYER_DURATION = 45;
     const startIndex = PRAYER_NAMES.findIndex(p => p.toLowerCase() === startName.toLowerCase());
     const endIndex = PRAYER_NAMES.findIndex(p => p.toLowerCase() === endName.toLowerCase());
 
@@ -16,11 +15,14 @@ function generateBetweenPrayersIcsEvents(calendar, startName, endName, eventName
 
         days.forEach(day => {
             const prayers = getPrayerTimesForDay(monthObj, day);
-            if (!prayers) return;
+            const iqamaTimes = getIqamaTweaksForDay(iqamaCalendar[month-1], day, prayers);
+            if (!prayers || !iqamaTimes) return;
 
             const startTimeStr = prayers[startIndex];
             const prayerStartDate = parseTimeToDate(year, month, day, startTimeStr);
-            const startDate = addMinutes(prayerStartDate, PRAYER_DURATION);
+            
+            const prayerDuration = getPrayerDuration(iqamaTimes[startIndex], startIndex, prayerStartDate);
+            const startDate = addMinutes(prayerStartDate, prayerDuration);
 
             let endDate;
             if (startIndex < endIndex) {
