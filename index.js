@@ -4,21 +4,23 @@ const http = require('http');
 const { fetchPrayerTimes, eventsToIcsContent } = require('./blocks/utils');
 const { generatePrayerIcsEvents } = require('./blocks/prayers');
 const { generateSleepIcsEvents } = require('./blocks/sleep');
+const { generateBetweenPrayersIcsEvents } = require('./blocks/between-prayers');
 
 const PORT = process.env.PORT || 3000;
 const CLIENT_DIST = path.join(__dirname, 'client', 'dist');
 
 const server = http.createServer(async (req, res) => {
-    const url = req.url;
+    const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+    const pathname = parsedUrl.pathname;
 
-    if (url === '/health') {
+    if (pathname === '/health') {
         res.writeHead(200);
         res.end('OK');
         return;
     }
 
     // Match /ics/<mosqueId>/<type>
-    const icsMatch = url.match(/^\/ics\/(.+)\/(prayers|sleep)$/);
+    const icsMatch = pathname.match(/^\/ics\/(.+)\/(prayers|sleep|between)$/);
     if (icsMatch) {
         const mosqueId = icsMatch[1];
         const type = icsMatch[2];
@@ -34,6 +36,15 @@ const server = http.createServer(async (req, res) => {
             } else if (type === 'sleep') {
                 events = generateSleepIcsEvents(calendar);
                 filename = 'sleep.ics';
+            } else if (type === 'between') {
+                const start = parsedUrl.searchParams.get('start');
+                const end = parsedUrl.searchParams.get('end');
+                const name = parsedUrl.searchParams.get('name') || 'Activity';
+                if (!start || !end) {
+                    throw new Error('Missing "start" or "end" query parameters');
+                }
+                events = generateBetweenPrayersIcsEvents(calendar, start, end, name);
+                filename = `${name.replace(/\s+/g, '_')}.ics`;
             }
 
             const icsContent = eventsToIcsContent(events);
@@ -53,7 +64,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Serve static files from client/dist
-    let filePath = path.join(CLIENT_DIST, url === '/' ? 'index.html' : url);
+    let filePath = path.join(CLIENT_DIST, pathname === '/' ? 'index.html' : pathname);
     
     // Safety check to prevent directory traversal
     if (!filePath.startsWith(CLIENT_DIST)) {

@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 
 function App() {
-  const [mosqueId, setMosqueId] = useState('vlaardingen/noer-islam');
+  const [mosqueId, setMosqueId] = useState('attaqwa-etten-leur');
   const [baseUrl, setBaseUrl] = useState('');
+  const [eventName, setEventName] = useState('Reading');
+  const [startPrayer, setStartPrayer] = useState('Maghrib');
+  const [endPrayer, setEndPrayer] = useState('Isha');
+
+  const prayers = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
   useEffect(() => {
     setBaseUrl(window.location.origin);
@@ -11,6 +16,9 @@ function App() {
   const cleanId = mosqueId.trim().replace(/^\/+|\/+$/g, '');
   const prayersUrl = cleanId ? `${baseUrl}/ics/${cleanId}/prayers` : '';
   const sleepUrl = cleanId ? `${baseUrl}/ics/${cleanId}/sleep` : '';
+  const betweenUrl = cleanId 
+    ? `${baseUrl}/ics/${cleanId}/between?start=${startPrayer}&end=${endPrayer}&name=${encodeURIComponent(eventName)}`
+    : '';
 
   const styles = {
     body: { padding: '40px', maxWidth: '800px', margin: '0 auto' },
@@ -45,6 +53,38 @@ function App() {
           <p style={styles.hint}>Found in the Mawaqit URL: mawaqit.net/en/<strong>mosque-id</strong></p>
         </div>
 
+        <div style={{...styles.inputGroup, display: 'flex', gap: '15px'}}>
+          <div style={{flex: 1}}>
+            <label style={styles.label}>Event Name:</label>
+            <input 
+              type="text" 
+              style={styles.input}
+              value={eventName}
+              onChange={(e) => setEventName(e.target.value)}
+            />
+          </div>
+          <div style={{flex: 1}}>
+            <label style={styles.label}>Start Prayer:</label>
+            <select 
+              style={styles.input}
+              value={startPrayer}
+              onChange={(e) => setStartPrayer(e.target.value)}
+            >
+              {prayers.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div style={{flex: 1}}>
+            <label style={styles.label}>End Prayer:</label>
+            <select 
+              style={styles.input}
+              value={endPrayer}
+              onChange={(e) => setEndPrayer(e.target.value)}
+            >
+              {prayers.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+        </div>
+
         <div style={styles.links}>
           <div style={styles.linkCard}>
             <h3 style={styles.linkCardTitle}>Prayers ICS Feed</h3>
@@ -56,6 +96,13 @@ function App() {
             <h3 style={styles.linkCardTitle}>Sleep ICS Feed</h3>
             <div style={styles.urlBox}>{sleepUrl || 'Please enter a Mosque ID'}</div>
             {sleepUrl && <a href={sleepUrl} target="_blank" style={styles.link}>Open Feed</a>}
+          </div>
+
+          <div style={{...styles.linkCard, borderLeftColor: '#f1c40f'}}>
+            <h3 style={styles.linkCardTitle}>Custom "Between Prayers" Feed</h3>
+            <div style={styles.urlBox}>{betweenUrl || 'Please enter a Mosque ID'}</div>
+            {betweenUrl && <a href={betweenUrl} target="_blank" style={styles.link}>Open Feed</a>}
+            <p style={styles.hint}>Generates events named "{eventName}" between {startPrayer} and {endPrayer}.</p>
           </div>
         </div>
       </div>
